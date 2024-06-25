@@ -1,39 +1,36 @@
-# RML - The Reactive Markup Language
-A conceptual extension of HTML with first-class support for promises and observables
+# RML - Reactive Markup Language
+RML is a "conceptual" functional-reactive extension of HTML and the DOM with first-class support for promises and observables
 
-Both HTML and JavaScript have evolved significantly over time. HTML introduced new tags and new magic on one end, JavaScript is adding and evolving new primites like Promises and Observables.
+Both HTML and JavaScript have evolved significantly over time.
+HTML introduced new tags and new magic on one end, JavaScript is creating new primites like Promises and Observables.
 
-Despite all this progress, HTML markup is still limited to support strings and string representations of numbers, functions or more HTML.
+Despite this progress, HTML markup is still limited to strings and string representations of numbers and some basic function expressions.
 
 ```html
-<div id="a-string" class="a list of strings" onclick="the body of a javascript function" data-example="example data">
-  some HTML string
+<div id="a-string" class="more strings" onclick="someFunction()" data-foo="bar">
+  some <strong>HTML</strong> string
 </div>
 ```
 
-JavaScript, on the other hand, deals with a wider set of primitives and data types, let alone it can access these through a number of different APIs, like event emitters (`.on('event', fn)`), object properties (`.innerHTML`), etc.
+JavaScript, on the other hand, deals with a wide range of primitives and data types, let alone it can access the above through a number of different DOM APIs, like event emitters (`.on('event', fn)`), object properties (`.innerHTML`), etc.
 
-This leads to a lot of glue code and boilerplate that every piece of JavaScript has to repeat many times over.
+This leads to a lot of boilerplate.
 
 ## Extending HTML
-The next logical step is to make HTML support more primitives and data types natively, or more transparently to the scripting code.
+The next logical step is to make HTML support more primitives and data types natively, or more transparently to scripts.
 
-This is the specification of such thing, the Reactive Markup Language, RML for short.
+This document is the specification of such thing, the Reactive Markup Language, or RML for short.
 
-At this stage RML is a concept, most easily implemented by templating engines, either based on template literals or other abstractions like JSX/ESX.
+At this stage RML is a concept, most easily implemented by template engines, UI libraries or frameworks, either based on template literals or other abstractions like JSX/ESX.
 
-The first reference implementation is provided by [Rimmel.js](https://github.com/hellomenu/rimmel)
+A reference implementation is provided by [Rimmel.js](https://github.com/reactivehtml/rimmel)
 
 # Static markup vs JSON notation
 RML templates can take any of the following forms:
-- Simple Strings
-- HyperStrings (template strings interleaved with JavaScript values such as strings, numbers, functions, promises, observables). E.g.: `<div>${someJavaScriptVariable}</div>`
-- JavaScript objects / JavaScript maps
-- JavaScript Arrays / JavaScript sets
-
-Strings and HyperStrings can in turn contain either of the following:
-- Full HTML tags, e.g.: `<div id="container"></div>`
-- Partial HTML tags that can be concatenated together to form full HTML tags, e.g.: `id="container class="highlight"`
+- Simple HTML Strings
+- JavaScript tagged templates with string/nlmber/function/Promise/Observable expressions). E.g.: `<div>${someJavaScriptVariable}</div>`
+- DOM Objects / JavaScript Maps
+- Arrays
 
 The JSON form is called JSON, but in reality it refers to regular JavaScript objects.
 These are used to represent and map to HTML attributes, including some special-purpose ones such as `class`, `data-*`, `disabled`, event listeners and can present themselves in a variety of forms, depending on the type of attribute they represent.
@@ -156,28 +153,31 @@ In the code above, every time the button is clicked, it will call `handlerStream
 
 By convention, every HTML attribute whose name starts with "on", will be treated as an event source.
 
-### The onmount source
-There is one special event source, 'onmount', not part ofthe HTML specification, which will fire immediately after a given tag has been attached to the DOM.
+### The rml:onmount source
+There is one special event source, 'rml:onmount', not part ofthe HTML specification, which will fire immediately after a given element has been attached to the DOM.
+Note how every RML attribute that's not an HTML standard is prefixed with `rml:`, similarly to the way XML Namespaces are used.
+
 ```js
   const init = (e: MountEvent) => {
     console.log('An element has been mounted')
   }
-  
+
   const template = rml`
-    <div onmount="${handlerFunction}"></div>
+    <div rml:onmount="${handlerFunction}"></div>
   `
 ```
 
 ### Sinks
-Sinks are the opposite of sources. Sources emit events, sinks send them to the DOM.
+Sinks are the opposite of sources. Sources emit events, sinks render them to the DOM.
 There are many types of sinks, depending on the use case. Typically they perform some final transformation before calling any relevant DOM API to display data.
 Sinks can be implicit, when it's obvious from the syntax and the context what should happen, and explicit, where developers can request a particular sink to be used to render data.
-There are also three categories of sinks: single-value, multi-value, and any-value sinks, which can respectively sink one value at a time, or more, every time some data is emitted. Any-value sinks will determine at runtime what they need to do.
+There are three categories of sinks: single-value, multi-value, and runtime sinks, which can respectively sink one or more values every time some data is emitted.
+Dynamic sinks will determine at runtime what they need to do. An `Observable<unknown>` would typically emit into a runtime sync.
 
 #### Implicit Sinks
-Following is a list of implicit sinks used in RML:
+Following is a list of implicit sinks used in RML
 
-##### innerHTMLSink
+##### InnerHTML Sink
 This any-value sink takes a string and sets `innerHTML` on the specified node. It's used by default when a Promise or an Observable are placed as a child element of a tag:
 ```js
   const str = fetch(/*some.api/data*/).then(x=>x.text())
@@ -194,7 +194,7 @@ If non-string values get emitted to this sink, the following will apply.
 
 
 
-##### styleMultiSink
+##### Style Object Sink
 This multi-value sink takes a JavaScript Object and sets styles on the target object when an object or a deferred object (Promise<Object> or Observable<Object>) are set in a tag's `style` attribute
 ```js
   const styles = {
@@ -208,7 +208,7 @@ This multi-value sink takes a JavaScript Object and sets styles on the target ob
     </svg>
   `
 ```
-##### styleSink
+##### Style Sink
 This single-value sink takes a static or deferred string and sets is as a style on the target object when set in a tag's `style` attribute's value:
 ```js
   const position = Promise.resolve('absolute')
@@ -220,7 +220,7 @@ This single-value sink takes a static or deferred string and sets is as a style 
   `
 ```
 
-##### valueSink
+##### Value Sink
 This single-value sink takes a static or deferred string and sets is as the `value` on an `<input>` tag:
 ```js
   const laterValue = Promise.resolve('hello world')
@@ -230,7 +230,7 @@ This single-value sink takes a static or deferred string and sets is as the `val
   `
 ```
   
-##### attributeSink
+##### Attribute Sink
 This single-value sink takes a static or deferred string and sets is as the `value` for the specified attribute in a tag:
 ```js
   const laterValue = Promise.resolve('hello world')
@@ -240,7 +240,7 @@ This single-value sink takes a static or deferred string and sets is as the `val
   `
 ```
 
-##### attributeMultiSink
+##### Attribute Object Sink
 This multi-value sink takes a static or deferred object and sets the corresponding key-value pairs as attribute-value pairs in the target tag:
 ```js
   const laterValue = Promise.resolve({
@@ -255,7 +255,7 @@ This multi-value sink takes a static or deferred object and sets the correspondi
 ```  
   
 #### Explicit Sinks
-  Sometimes the default sinks will not be a convenient way to sink data to the DOM. In that case, it is possible to request other sinks to be used by wrappingn data in a `Sink` object.
+Sometimes the default sinks will not be a convenient way to sink data to the DOM. In that case, it is possible to request other sinks to be used by wrappingn data in a `Sink` object.
   
   Sink objects are instances of the Sink class and have a `.sink` attribute that helps identify them.
   
@@ -263,7 +263,7 @@ This multi-value sink takes a static or deferred object and sets the correspondi
     const data = "Dirty text from <script>doSometingNasty</script> untrusted sources"
   
     const template = rml`
-      <div>${innerTextSink(data)}</div>
+      <div>${InnerText(data)}</div>
     `
   ```
   In the code above, the string can be sinked to the DOM through `.innerText` for security.
@@ -274,24 +274,24 @@ This multi-value sink takes a static or deferred object and sets the correspondi
 - appendHTMLSink: similar to innerHTMLSink, this will call `.append()` on the target node.
 
 ### Initial vs deferred values
-  Some advanced Observable primitives like the `BehaviorSubject` have an initial static value, and then they can emit subsequent values asynchronously.
-  When a BehaviorSubject-like item is set in a RML template, its `.value` property will be used for the initial rendering, then its `.subscribe()` method will be called to get and sink subsequent values.
+Some advanced Observable primitives like the `BehaviorSubject` have an initial static value, and then they can emit subsequent values asynchronously.
+When a BehaviorSubject-like item is set in a RML template, its `.value` property will be used for the initial rendering, then its `.subscribe()` method will be called to get and sink subsequent values.
   
-  ```js
-    const stream = new BehaviorSubject('initial data')
-    setInterval(() => stream.next(getSomeRandomData()), 1000)
-  
-    const template = rml`
-      <div>${stream}</div>
-    `
-  ```
-  In this case, the `div` will be initially rendered with the text `initial data` without any <acronym title="Flash Of Unstyled Content">FOUC</acronmym>, then every second will have a new value set via `innerHTML`
+```js
+  const stream = new BehaviorSubject('initial data')
+  setInterval(() => stream.next(getSomeRandomData()), 1000)
+
+  const template = rml`
+    <div>${stream}</div>
+  `
+```
+In this case, the `div` will be initially rendered with the text `initial data` without any <acronym title="Flash Of Unstyled Content">FOUC</acronmym>, then every second will have a new value set via `innerHTML`
 
 ## Extensible components / Mixins
-Extensible components are regular HTML tags that can be enriched by synchronous or asynchronous mixins.
-Mixins are just partial RML tags used to enrich their host tags with new attributes, event handlers, classes, etc.
+Extensible components are regular HTML Elements that can be enriched by synchronous or asynchronous mixins.
+Mixins are just partial RML/DOM objects used to enrich their host tags with new attributes, event handlers, classes, etc.
 They can be useful to make certain HTML tags gain new functionality without repeating code, or gain it at a later point in time.
-Mixins are created easily, by implicitly invoking an `attributeMultiSink`.
+Mixins are created easily, by implicitly invoking an `Attribute Object Sink`.
 
 ```js
 // Make an element "content editable" when clicked
@@ -318,10 +318,9 @@ const template = rml`
   <div ...${editableWhenEnabled}</div>
 `
 ```
-## RML Compliant template engines
-  ATM the only reference implementation of RML is [Rimmel.js](https://www.npmjs.com/package/rimmel)
-  As both RML and Rimmel.js are evolving, the two projects may not be 100% aligned and there may be little discrepancies from the spec here and the actual implementation.
+## RML Compliant UI libraries
+  The reference implementation of RML is [Rimmel.js](https://github.com/reactivehtml/rimmel)
   
 ## References
-  There are people trying to make HTML natively support Observables and some discussion is going on here: [whatwg/dom#544](https://github.com/whatwg/dom/issues/544)
-  
+There are discussions going on around making HTML and/or the DOM natively support Observables at [WHATWG DOM/544](https://github.com/whatwg/dom/issues/544) and the more recent [Observable DOM](https://github.com/WICG/observable).
+
